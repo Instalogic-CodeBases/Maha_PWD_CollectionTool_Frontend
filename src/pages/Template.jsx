@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useApp } from '../context/AppContext.jsx';
 import { usePageData } from '../lib/usePageData.js';
 import { useToast } from '../context/ToastContext.jsx';
 import API from '../api/client.js';
 import Modal from '../components/Modal.jsx';
-import { englishToMarathiMeaning } from '../lib/translit.js';
+import { translateEnglishToMarathi } from '../lib/translit.js';
 
 const FIELD_TYPES = ['text', 'number', 'date', 'district', 'scheme', 'computerId', 'autoRemaining'];
 
@@ -30,6 +30,7 @@ export default function Template() {
   const [fmMar, setFmMar] = useState('');
   const [fmType, setFmType] = useState('text');
   const [fmMand, setFmMand] = useState(false);
+  const fmTranslateSeq = useRef(0); // guards against out-of-order async translation responses
 
   // assign-districts modal state
   const [assignOpen, setAssignOpen] = useState(false);
@@ -41,7 +42,9 @@ export default function Template() {
     const t = currentTemplate();
     if (!t) return '';
     const ids = (t.districtIds || []).map(String);
-    if (!ids.length) return 'No districts assigned — officers in unassigned districts use the default template.';
+    // Default Template disabled — no longer referencing the default-template fallback message.
+    // if (!ids.length) return 'No districts assigned — officers in unassigned districts use the default template.';
+    if (!ids.length) return 'No districts assigned.';
     if (allDistrictsList.length) {
       const names = allDistrictsList.filter((d) => ids.includes(String(d.id))).map((d) => d.name);
       if (names.length) return 'Assigned districts: ' + names.join(', ');
@@ -81,8 +84,10 @@ export default function Template() {
   const deleteTemplateUI = async () => {
     const t = currentTemplate();
     if (!t) return;
-    if (t.isDefault) { toast('The default template cannot be deleted.', 'warn'); return; }
-    if (!window.confirm('Delete template "' + t.name + '"? Districts assigned to it will fall back to the default template.')) return;
+    // Default Template disabled — no template is treated as an undeletable "default" anymore.
+    // if (t.isDefault) { toast('The default template cannot be deleted.', 'warn'); return; }
+    // if (!window.confirm('Delete template "' + t.name + '"? Districts assigned to it will fall back to the default template.')) return;
+    if (!window.confirm('Delete template "' + t.name + '"?')) return;
     try {
       await API.deleteTemplate(t.id);
       setCurrentTemplateId(null);
@@ -173,27 +178,53 @@ export default function Template() {
     <>
       <div className="toolbar">
         <div>
-          {/* <h2 className="page-title">Dynamic Template</h2> */}
-          <div className="page-sub">Add / edit / delete / reorder fields. Changes apply immediately to the Online Form, Marathi Excel Template, View Submitted Data, and Reports.</div>
+          {/* <h2 className="page-title">Dynamic Template</h2>
+          <div className="page-sub">Add / edit / delete / reorder fields. Changes apply immediately to the Online Form, Marathi Excel Template, View Submitted Data, and Reports.</div> */}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        {/* <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn" onClick={() => toast('Reset is disabled — template fields are managed in the backend now.', 'warn')}>Reset</button>
           <button className="btn btn-blue" onClick={() => openFieldModal()}>+ Add Field</button>
-        </div>
+        </div> */}
       </div>
 
       <div className="card" style={{ marginBottom: 14 }}>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <label style={{ fontWeight: 700 }}>Template:</label>
-          <select value={currentTemplateId ?? ''} onChange={(e) => selectTemplate(e.target.value)} style={{ minWidth: 240 }}>
+          <select value={currentTemplateId ?? ''} onChange={(e) => selectTemplate(e.target.value)} style={{ minWidth: 240 }}
+            >
             {templates.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}{t.isDefault ? ' (default)' : ''} · {t.fieldCount || 0} fields</option>
+              // Default Template disabled — no longer showing "(default)" label in the dropdown.
+              // <option key={t.id} value={t.id}>{t.name}{t.isDefault ? ' (default)' : ''} · {t.fieldCount || 0} fields</option>
+              <option key={t.id} value={t.id}>{t.name} · {t.fieldCount || 0} fields</option>
             ))}
           </select>
-          <button className="btn" onClick={createTemplateUI}>+ New Template</button>
-          <button className="btn" onClick={renameTemplateUI}>Rename</button>
-          <button className="btn btn-blue" onClick={assignDistrictsUI}>Assign Districts</button>
-          <button className="btn danger" onClick={deleteTemplateUI}>Delete</button>
+         <button className="btn" onClick={createTemplateUI}>+ New Template</button>
+
+<button className="btn" onClick={renameTemplateUI}>Rename</button>
+
+<button className="btn btn-blue" onClick={assignDistrictsUI}>
+  Assign Districts
+</button>
+
+<button className="btn danger" onClick={deleteTemplateUI}>
+  Delete
+</button>
+
+<button
+  className="btn"
+  onClick={() =>
+    toast('Reset is disabled — template fields are managed in the backend now.', 'warn')
+  }
+>
+  Reset
+</button>
+
+<button
+  className="btn btn-blue"
+  onClick={() => openFieldModal()}
+>
+  + Add Field
+</button>
         </div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>{tmplDistrictSummary()}</div>
       </div>
@@ -233,7 +264,14 @@ export default function Template() {
         <div className="form-grid">
           <div className="form-field">
             <label>English Name <span className="req">*</span></label>
-            <input value={fmEn} onChange={(e) => { setFmEn(e.target.value); setFmMar(englishToMarathiMeaning(e.target.value)); }} />
+            <input value={fmEn} onChange={(e) => {
+              const v = e.target.value;
+              setFmEn(v);
+              const seq = ++fmTranslateSeq.current;
+              translateEnglishToMarathi(v).then((mar) => {
+                if (fmTranslateSeq.current === seq) setFmMar(mar);
+              });
+            }} />
           </div>
           <div className="form-field">
             <label>Marathi Name <span className="req">*</span></label>
@@ -263,17 +301,7 @@ export default function Template() {
         onClose={() => setAssignOpen(false)}
         footer={<><button className="btn" onClick={() => setAssignOpen(false)}>Cancel</button><button className="btn btn-blue" onClick={saveAssignDistricts}>Save</button></>}
       >
-        <div style={{ maxHeight: 360, overflow: 'auto' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 4px', borderBottom: '2px solid var(--border)', position: 'sticky', top: 0, background: '#fff', fontWeight: 700, zIndex: 1 }}>
-            <input
-              type="checkbox"
-              checked={allDistrictsList.length > 0 && allDistrictsList.every((d) => assignSel.has(String(d.id)))}
-              ref={(el) => { if (el) el.indeterminate = assignSel.size > 0 && !allDistrictsList.every((d) => assignSel.has(String(d.id))); }}
-              onChange={(e) => setAssignSel(e.target.checked ? new Set(allDistrictsList.map((d) => String(d.id))) : new Set())}
-            />
-            <span>Select All</span>
-            <span className="chip" style={{ marginLeft: 'auto' }}>{assignSel.size}/{allDistrictsList.length}</span>
-          </label>
+        <div style={{ maxHeight: 340, overflow: 'auto' }}>
           {allDistrictsList.map((d) => (
             <label key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px', borderBottom: '1px solid var(--border)' }}>
               <input type="checkbox" checked={assignSel.has(String(d.id))} onChange={(e) => toggleAssign(d.id, e.target.checked)} />

@@ -16,6 +16,7 @@ export default defineConfig({
     host: 'localhost',
     port: 5500,
     strictPort: true,
+    open: true, // auto-opens the default browser when `npm run dev` starts
   },
   preview: {
     host: 'localhost',

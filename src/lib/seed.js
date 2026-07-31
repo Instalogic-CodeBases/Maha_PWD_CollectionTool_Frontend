@@ -46,24 +46,26 @@ export const DEFAULT_COMPUTER_IDS = [
   { id: 'c9', computerId: '30540167', schemeName: '(04) केंद्रीय मार्ग निधी' },
 ];
 
-export const DEFAULT_FIELDS = [
-  { id: 'f1', key: 'district', marathi: 'जिल्हा', english: 'District', type: 'district', mandatory: true },
-  { id: 'f2', key: 'department', marathi: 'विभागाचे नांव', english: 'Department Name', type: 'text', mandatory: true },
-  { id: 'f3', key: 'schemeName', marathi: 'योजनेचे नाव', english: 'Scheme Name', type: 'scheme', mandatory: true },
-  { id: 'f4', key: 'computerId', marathi: 'संगणक संकेतांक', english: 'Computer ID', type: 'computerId', mandatory: true },
-  { id: 'f5', key: 'workId', marathi: 'वर्क ID', english: 'Work ID', type: 'text', mandatory: false },
-  { id: 'f6', key: 'workName', marathi: 'कामाचे नाव', english: 'Work Name', type: 'text', mandatory: true },
-  { id: 'f7', key: 'adminApprovalDate', marathi: 'प्रशासकीय मान्यतेचा दिनांक', english: 'Admin Approval Date', type: 'date', mandatory: true },
-  { id: 'f8', key: 'estimatedCost', marathi: 'अंदाजित किंमत', english: 'Estimated Cost (Lakhs)', type: 'number', mandatory: true },
-  { id: 'f9', key: 'expByMarch2026', marathi: 'माचे 2026 अखेर खर्च', english: 'Exp. till March 2026 (Lakhs)', type: 'number', mandatory: true },
-  { id: 'f10', key: 'remainingCost', marathi: 'उर्वरित किंमत', english: 'Remaining Cost (auto = 8-9)', type: 'autoRemaining', mandatory: false },
-  { id: 'f11', key: 'received2627', marathi: 'सन 2026-27 मध्ये प्राप्त', english: 'Received in 2026-27 (Lakhs)', type: 'number', mandatory: true },
-  { id: 'f12', key: 'spent2627', marathi: 'सन 2026-27 मधील खर्च', english: 'Spent in 2026-27 (Lakhs)', type: 'number', mandatory: true },
-  { id: 'f13', key: 'pendingAsOf', marathi: 'दि.09/07/26 च्या प्रलंबित देयकांची रक्कम', english: 'Pending Bills as of 09/07/26 (Lakhs)', type: 'number', mandatory: true },
-  { id: 'f14', key: 'billReceivedDate', marathi: 'विभागात देयक प्राप्त झालेला दिनांक', english: 'Bill Received Date', type: 'date', mandatory: false },
-  { id: 'f15', key: 'physicalProgress', marathi: 'कामाची भौतिक प्रगती (टक्केवारी)', english: 'Physical Progress (%)', type: 'number', mandatory: true },
-  { id: 'f16', key: 'remarks', marathi: 'शेरा', english: 'Remarks', type: 'text', mandatory: false },
-];
+// Default Template disabled — this default/seed field set is no longer used
+// anywhere in the app (fields now always come from the backend-selected template).
+// export const DEFAULT_FIELDS = [
+//   { id: 'f1', key: 'district', marathi: 'जिल्हा', english: 'District', type: 'district', mandatory: true },
+//   { id: 'f2', key: 'department', marathi: 'विभागाचे नांव', english: 'Department Name', type: 'text', mandatory: true },
+//   { id: 'f3', key: 'schemeName', marathi: 'योजनेचे नाव', english: 'Scheme Name', type: 'scheme', mandatory: true },
+//   { id: 'f4', key: 'computerId', marathi: 'संगणक संकेतांक', english: 'Computer ID', type: 'computerId', mandatory: true },
+//   { id: 'f5', key: 'workId', marathi: 'वर्क ID', english: 'Work ID', type: 'text', mandatory: false },
+//   { id: 'f6', key: 'workName', marathi: 'कामाचे नाव', english: 'Work Name', type: 'text', mandatory: true },
+//   { id: 'f7', key: 'adminApprovalDate', marathi: 'प्रशासकीय मान्यतेचा दिनांक', english: 'Admin Approval Date', type: 'date', mandatory: true },
+//   { id: 'f8', key: 'estimatedCost', marathi: 'अंदाजित किंमत', english: 'Estimated Cost (Lakhs)', type: 'number', mandatory: true },
+//   { id: 'f9', key: 'expByMarch2026', marathi: 'माचे 2026 अखेर खर्च', english: 'Exp. till March 2026 (Lakhs)', type: 'number', mandatory: true },
+//   { id: 'f10', key: 'remainingCost', marathi: 'उर्वरित किंमत', english: 'Remaining Cost (auto = 8-9)', type: 'autoRemaining', mandatory: false },
+//   { id: 'f11', key: 'received2627', marathi: 'सन 2026-27 मध्ये प्राप्त', english: 'Received in 2026-27 (Lakhs)', type: 'number', mandatory: true },
+//   { id: 'f12', key: 'spent2627', marathi: 'सन 2026-27 मधील खर्च', english: 'Spent in 2026-27 (Lakhs)', type: 'number', mandatory: true },
+//   { id: 'f13', key: 'pendingAsOf', marathi: 'दि.09/07/26 च्या प्रलंबित देयकांची रक्कम', english: 'Pending Bills as of 09/07/26 (Lakhs)', type: 'number', mandatory: true },
+//   { id: 'f14', key: 'billReceivedDate', marathi: 'विभागात देयक प्राप्त झालेला दिनांक', english: 'Bill Received Date', type: 'date', mandatory: false },
+//   { id: 'f15', key: 'physicalProgress', marathi: 'कामाची भौतिक प्रगती (टक्केवारी)', english: 'Physical Progress (%)', type: 'number', mandatory: true },
+//   { id: 'f16', key: 'remarks', marathi: 'शेरा', english: 'Remarks', type: 'text', mandatory: false },
+// ];
 
 export const DEFAULT_USERS = [
   { id: 'u1', name: 'System Administrator', username: 'admin', password: 'admin', role: 'admin', districts: [] },

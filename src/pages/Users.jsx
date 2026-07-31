@@ -207,7 +207,7 @@ export default function Users() {
 
       <div className="toolbar">
         <div>
-          <div className="page-sub">Create users with an email, phone, role and one or more assigned districts. Active users can log in immediately with the email &amp; password set here.</div>
+          <div className="page-sub"></div>
         </div>
         <button className="btn btn-blue" onClick={() => openModal()}>+ Add User</button>
       </div>
