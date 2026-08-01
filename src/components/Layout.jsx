@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
+import ChangePasswordModal from './ChangePasswordModal.jsx';
 
 /* ------------------------------------------------------------------ */
 /* Lightweight inline icon set (stroke-based, inherits currentColor).  */
@@ -22,15 +23,15 @@ function NavIcon({ name }) { return ICONS[name] || ICONS.dashboard; }
 const NAV_ADMIN = [
   ['dashboard', 'Dashboard'],
   ['users', 'User Management'],
-  ['dataform', 'Data Form'],
-  ['template', 'Dynamic Template'],
-  ['cids', 'Computer ID Management'],
+  // ['dataform', 'Data Form'],
+  // ['template', 'Dynamic Template'],
+  // ['cids', 'Computer ID Management'],
   ['viewdata', 'View Submitted Data'],
   ['reports', 'Reports'],
 ];
 const NAV_OFFICER = [
   ['dashboard', 'Dashboard'],
-  ['dataform', 'Fill Daily Form'],
+  // ['dataform', 'Fill Daily Form'],
   ['upload', 'Upload Excel'],
   ['viewdata', 'View Submitted Data'],
   ['reports', 'Reports'],
@@ -38,6 +39,7 @@ const NAV_OFFICER = [
 
 export default function Layout() {
   const { currentUser, logout } = useApp();
+  const [pwOpen, setPwOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -51,9 +53,9 @@ export default function Layout() {
   const titleMap = {
     dashboard: 'Dashboard',
     users: 'User Management',
-    dataform: isAdmin ? 'Data Form' : 'Fill Daily Form',
-    template: 'Dynamic Template',
-    cids: 'Computer ID Management',
+    // dataform: isAdmin ? 'Data Form' : 'Fill Daily Form',
+    // template: 'Dynamic Template',
+    // cids: 'Computer ID Management',
     upload: 'Upload Excel',
     viewdata: 'View Submitted Data',
     reports: 'Reports',
@@ -102,12 +104,17 @@ export default function Layout() {
                 <div className="u-role">{isAdmin ? 'Super Admin' : 'Circle Officer'}</div>
               </div>
             </div>
+            <button className="btn btn-sm" onClick={() => setPwOpen(true)} title="Change Password">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+              Change Password
+            </button>
             <button className="btn btn-sm" onClick={onLogout}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5M21 12H9" /></svg>
               Logout
             </button>
           </div>
         </div>
+        <ChangePasswordModal open={pwOpen} onClose={() => setPwOpen(false)} />
         <div className="content">
           <Outlet />
         </div>

@@ -285,3 +285,27 @@ tbody tr:hover { background: #f7faf8; }
   .table-toolbar { flex-direction: column; align-items: stretch; }
   .search-box, .search-box input { width: 100%; }
 }
+/* ============================================================= */
+/* Phase 4 — UI polish (appended; overrides by cascade order).   */
+/* Lighter palette, balanced spacing, consistent placeholders.   */
+/* Intentionally minimal — refines the existing design, no redesign. */
+/* ============================================================= */
+:root {
+  --bg: #f5f7f9;            /* lighter, cleaner background */
+  --border: #eceff2;
+}
+
+/* Balanced top spacing so pages without an inner heading don't look empty */
+.content { padding-top: 22px; }
+.toolbar { margin-bottom: 16px; }
+.toolbar:empty { display: none; margin: 0; }
+.content > .card:first-child { margin-top: 0; }
+
+/* Consistent placeholder tone across every input/select/search */
+::placeholder { color: #aab2bd; opacity: 1; }
+
+/* Slightly softer card shadow line for a cleaner, professional look */
+.card { border-color: var(--border); }
+
+/* Login emblem holds the SVG logo centred */
+.login-emblem { display: flex; align-items: center; justify-content: center; }
