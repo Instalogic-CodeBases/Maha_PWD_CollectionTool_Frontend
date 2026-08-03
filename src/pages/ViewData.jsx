@@ -5,6 +5,7 @@ import { usePagination } from '../lib/usePagination.js';
 import API from '../api/client.js';
 import Modal from '../components/Modal.jsx';
 import Pagination from '../components/Pagination.jsx';
+import { Icon } from '../components/Icons.jsx';
 
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
@@ -21,8 +22,17 @@ function saveBlob(blob, name) {
   document.body.appendChild(link); link.click(); link.remove();
   URL.revokeObjectURL(url);
 }
-function fmtDate(iso) { if (!iso) return ''; const d = new Date(iso); return d.toLocaleDateString(); }
-function fmtTime(iso) { if (!iso) return ''; const d = new Date(iso); return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+// Backend timestamps are stored in UTC. When they come back without a timezone
+// designator, the browser would (incorrectly) treat them as LOCAL time — showing a
+// wrong time. Treat a timezone-less value as UTC, then format in the viewer's locale.
+function toLocalDate(iso) {
+  if (!iso) return null;
+  const hasTz = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(String(iso));
+  const d = new Date(hasTz ? iso : iso + 'Z');
+  return isNaN(d.getTime()) ? new Date(iso) : d;
+}
+function fmtDate(iso) { const d = toLocalDate(iso); return d ? d.toLocaleDateString() : ''; }
+function fmtTime(iso) { const d = toLocalDate(iso); return d ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''; }
 function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 export default function ViewData() {
@@ -38,6 +48,20 @@ export default function ViewData() {
   const [busy, setBusy] = useState(false);
   const [editErrors, setEditErrors] = useState(null);
   const editFileRef = useRef(null);
+  const [exporting, setExporting] = useState(false);
+
+  // SUPER ADMIN: download the complete Excel across all circles.
+  const onExportAll = async () => {
+    setExporting(true);
+    try {
+      saveBlob(await API.exportAllCircles(), `MDR_AllCircles_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast('Exported all circles');
+    } catch (err) {
+      toast(err.message || 'Export failed', 'err');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -95,7 +119,7 @@ export default function ViewData() {
 
   const startEdit = async (id) => {
     setEditRow({ id }); setEditErrors(null);
-    try { saveBlob(await API.downloadSubmission(id, true), `MDR_Submission_${id}.xlsx`); toast('Downloaded — edit the file, then upload it here.'); }
+    try { saveBlob(await API.downloadSubmission(id, true, isAdmin), `MDR_Submission_${id}.xlsx`); toast('Downloaded — edit the file, then upload it here.'); }
     catch (err) { toast(err.message || 'Could not start edit', 'err'); }
   };
   const submitEdit = async (file) => {
@@ -136,9 +160,16 @@ export default function ViewData() {
       <div className="card">
         <div className="table-toolbar">
           <div className="section-title" style={{ margin: 0 }}>{isAdmin ? 'All Submissions' : 'My Submissions'}</div>
-          <div className="search-box">
-            <SearchIcon />
-            <input placeholder="Search uploaded by, circle, status…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {isAdmin && (
+              <button className="btn btn-blue btn-sm" onClick={onExportAll} disabled={exporting} title="Export the complete Excel across all circles" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="download" size={15} /> {exporting ? 'Exporting…' : 'Export All Circles (Excel)'}
+              </button>
+            )}
+            <div className="search-box">
+              <SearchIcon />
+              <input placeholder="Search uploaded by, circle, status…" value={q} onChange={(e) => setQ(e.target.value)} />
+            </div>
           </div>
         </div>
 
@@ -171,10 +202,10 @@ export default function ViewData() {
                   <td>{fmtDate(s.createdOn)} {fmtTime(s.createdOn)}</td>
                   <td>{s.modifiedOn ? `${fmtDate(s.modifiedOn)} ${fmtTime(s.modifiedOn)}` : '—'}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    <button className="icon-btn" title="View (open saved Excel)" onClick={() => openSubmissionExcel(s.id)}>👁️</button>
-                    <button className="icon-btn" title="Download Excel" onClick={() => openSubmissionExcel(s.id)}>⬇️</button>
-                    <button className="icon-btn" title="Download PDF" onClick={() => onDownloadPdf(s.id)}>🧾</button>
-                    {s.isOwner && !isAdmin && <button className="icon-btn" title="Edit" onClick={() => startEdit(s.id)}>✏️</button>}
+                    <button className="icon-btn" title="View (open saved Excel)" onClick={() => openSubmissionExcel(s.id)}><Icon name="view" /></button>
+                    <button className="icon-btn" title="Download Excel" onClick={() => openSubmissionExcel(s.id)}><Icon name="download" /></button>
+                    <button className="icon-btn" title="Download PDF" onClick={() => onDownloadPdf(s.id)}><Icon name="pdf" /></button>
+                    {(isAdmin || s.isOwner) && <button className="icon-btn" title={isAdmin ? 'Edit (all columns)' : 'Edit'} onClick={() => startEdit(s.id)}><Icon name="edit" /></button>}
                   </td>
                 </tr>
               )) : (
@@ -194,7 +225,7 @@ export default function ViewData() {
           <button className="btn btn-blue" disabled={busy} onClick={() => editFileRef.current?.click()}>{busy ? 'Uploading…' : 'Upload edited file'}</button></>}
       >
         <p style={{ marginTop: 0, fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>
-          The workbook for this submission (with your saved values) was downloaded automatically. Your saved rows appear first;
+          The workbook for this submission was downloaded automatically. Your saved rows appear first;
           the remaining works for your PW Circle are below so you can add more. Edit columns AD onwards, save the file,
           then click <b>Upload edited file</b> to update this submission.
         </p>

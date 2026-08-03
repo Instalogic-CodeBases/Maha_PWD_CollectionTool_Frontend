@@ -2,17 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import API from '../api/client.js';
-
-// Inline project logo (road/bridge motif for Public Works).
-function BrandLogo() {
-  return (
-    <svg width="34" height="34" viewBox="0 0 48 48" fill="none" stroke="#ffffff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M8 40 L20 8" /><path d="M40 40 L28 8" />
-      <path d="M24 12 v4 M24 22 v4 M24 32 v4" opacity="0.95" />
-      <path d="M6 40 h36" />
-    </svg>
-  );
-}
+import { PwdLogo } from '../components/Icons.jsx';
 
 export default function Login() {
   const { login, circleLogin } = useApp();
@@ -62,9 +52,11 @@ export default function Login() {
   return (
     <div className="login-screen">
       <div className="login-card">
-        <div className="login-emblem"><BrandLogo /></div>
-        <div className="login-title-mr">महाराष्ट्र राज्य रस्ते विकास</div>
-        <div className="login-title-en">PWD Data Collection &amp; Reporting</div>
+        {/* Official PWD Maharashtra logo: drop the file at public/pwd-logo.png and it
+            appears automatically (falls back to the crest until then). See Icons.jsx. */}
+        <div className="login-emblem" style={{ background: '#fff', padding: 4 }}><PwdLogo size={54} /></div>
+        <div className="login-title-mr">Public Works Department</div>
+        <div className="login-title-en">Government of Maharashtra · Data Collection &amp; Reporting Portal</div>
 
         <form onSubmit={onSubmit}>
           {mode === 'circle' ? (
@@ -104,10 +96,7 @@ export default function Login() {
         </div>
 
         <div style={{ marginTop: 14, textAlign: 'center' }}>
-          <a
-            style={{ cursor: 'pointer', fontSize: 12.5, color: 'var(--blue)', fontWeight: 600, textDecoration: 'underline' }}
-            onClick={() => { setError(''); setPassword(''); setMode(mode === 'circle' ? 'admin' : 'circle'); }}
-          >
+          <a style={{ cursor: 'pointer', fontSize: 12.5, color: 'var(--blue)', fontWeight: 600, textDecoration: 'underline' }} onClick={() => { setError(''); setPassword(''); setMode(mode === 'circle' ? 'admin' : 'circle'); }}>
             {mode === 'circle' ? 'Sign in as Administrator' : '← Back to Circle login'}
           </a>
         </div>

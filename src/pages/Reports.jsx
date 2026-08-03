@@ -4,10 +4,11 @@ import { usePageData } from '../lib/usePageData.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { usePagination } from '../lib/usePagination.js';
 import { districtsForUser, circleForDistrict } from '../lib/helpers.js';
-import { CIRCLES } from '../lib/seed.js';
+import { CIRCLES, DISTRICT_EN, CIRCLE_EN } from '../lib/seed.js';
 import { downloadReportExcel } from '../lib/excel.js';
 import ChartCanvas from '../components/ChartCanvas.jsx';
 import Pagination from '../components/Pagination.jsx';
+import { Icon } from '../components/Icons.jsx';
 
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
@@ -78,7 +79,7 @@ export default function Reports() {
   const lq = q.trim().toLowerCase();
   const rows = progLabels
     .map((d, i) => ({ d, circle: circleForDistrict(d), n: progMap[d].n, pending: byDist[d] || 0, avg: progVals[i] }))
-    .filter((r) => !lq || (r.d + ' ' + r.circle).toLowerCase().includes(lq));
+    .filter((r) => !lq || (r.d + ' ' + r.circle + ' ' + (DISTRICT_EN[r.d] || '') + ' ' + (CIRCLE_EN[r.circle] || '')).toLowerCase().includes(lq));
   const { page, setPage, pageCount, total, pageSize, pageRows } = usePagination(rows, 10, lq);
 
   if (loading) return <div className="empty">Loading…</div>;
@@ -91,7 +92,7 @@ export default function Reports() {
           {/* <h2 className="page-title">Reports</h2> */}
           <div className="page-sub">{isAdmin ? 'All circles and districts.' : 'Your assigned districts only.'}</div>
         </div>
-        <button className="btn btn-blue" onClick={onDownload}>⬇️ Download Report</button>
+        <button className="btn btn-blue" onClick={onDownload}><Icon name="download" size={15} /> Download Report</button>
       </div>
 
       <div className="card" style={{ marginBottom: 14 }}>
@@ -101,7 +102,7 @@ export default function Reports() {
               <label style={{ fontSize: 11, color: 'var(--muted)' }}>Circle</label><br />
               <select value={filters.circle} onChange={(e) => setFilters({ ...filters, circle: e.target.value })}>
                 <option value="">All</option>
-                {CIRCLES.map((x) => <option key={x} value={x}>{x}</option>)}
+                {CIRCLES.map((x) => <option key={x} value={x}>{CIRCLE_EN[x] || x}</option>)}
               </select>
             </div>
           )}
@@ -109,7 +110,7 @@ export default function Reports() {
             <label style={{ fontSize: 11, color: 'var(--muted)' }}>District</label><br />
             <select value={filters.dist} onChange={(e) => setFilters({ ...filters, dist: e.target.value })}>
               <option value="">All</option>
-              {uDist.map((d) => <option key={d} value={d}>{d}</option>)}
+              {uDist.map((d) => <option key={d} value={d}>{DISTRICT_EN[d] || d}</option>)}
             </select>
           </div>
           <div style={{ alignSelf: 'flex-end' }}>
@@ -143,8 +144,8 @@ export default function Reports() {
             <tbody>
               {pageRows.length ? pageRows.map((r) => (
                 <tr key={r.d}>
-                  <td>{r.d}</td>
-                  <td>{r.circle}</td>
+                  <td>{DISTRICT_EN[r.d] || r.d}</td>
+                  <td>{CIRCLE_EN[r.circle] || r.circle}</td>
                   <td>{r.n}</td>
                   <td>{r.pending.toFixed(2)}</td>
                   <td>{r.avg.toFixed(1)}</td>
