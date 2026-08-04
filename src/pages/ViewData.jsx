@@ -31,7 +31,26 @@ function toLocalDate(iso) {
   const d = new Date(hasTz ? iso : iso + 'Z');
   return isNaN(d.getTime()) ? new Date(iso) : d;
 }
-function fmtDate(iso) { const d = toLocalDate(iso); return d ? d.toLocaleDateString() : ''; }
+function fmtDate(iso) {
+  const d = toLocalDate(iso);
+  if (!d) return '';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}-${mm}-${d.getFullYear()}`;   // dd-MM-yyyy everywhere
+}
+// Format a saved cell for the PDF; dates -> dd-MM-yyyy.
+function fmtPdfCell(header, val) {
+  if (val == null || val === '') return '';
+  if (/date/i.test(header)) {
+    const d = toLocalDate(String(val));
+    if (d && !isNaN(d.getTime())) {
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      return `${dd}-${mm}-${d.getFullYear()}`;
+    }
+  }
+  return String(val);
+}
 function fmtTime(iso) { const d = toLocalDate(iso); return d ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''; }
 function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
@@ -103,13 +122,13 @@ export default function ViewData() {
         <div class="grp">
           <h3>Head of Account: ${esc(hoa)} &nbsp;·&nbsp; ${rows.length} record(s)</h3>
           <table><thead><tr>${head}</tr></thead><tbody>
-          ${rows.map((r) => `<tr>${cols.map((c) => `<td>${esc(r[c.header])}</td>`).join('')}</tr>`).join('')}
+          ${rows.map((r) => `<tr>${cols.map((c) => `<td>${esc(fmtPdfCell(c.header, r[c.header]))}</td>`).join('')}</tr>`).join('')}
           </tbody></table>
         </div>`).join('');
       const w = window.open('', '_blank');
       w.document.write(`<html><head><meta charset="utf-8"><title>Submission ${id}</title>${style}</head><body>
         <h2>PWD Submission #${id}</h2>
-        <div class="meta">Generated ${new Date().toLocaleString()} &nbsp;·&nbsp; * user-entered columns</div>
+        <div class="meta">Generated ${fmtDate(new Date().toISOString())} ${fmtTime(new Date().toISOString())} &nbsp;·&nbsp; * user-entered columns</div>
         ${sections}
         <script>window.onload=()=>window.print()<\/script></body></html>`);
       w.document.close();
@@ -202,7 +221,6 @@ export default function ViewData() {
                   <td>{fmtDate(s.createdOn)} {fmtTime(s.createdOn)}</td>
                   <td>{s.modifiedOn ? `${fmtDate(s.modifiedOn)} ${fmtTime(s.modifiedOn)}` : '—'}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    <button className="icon-btn" title="View (open saved Excel)" onClick={() => openSubmissionExcel(s.id)}><Icon name="view" /></button>
                     <button className="icon-btn" title="Download Excel" onClick={() => openSubmissionExcel(s.id)}><Icon name="download" /></button>
                     <button className="icon-btn" title="Download PDF" onClick={() => onDownloadPdf(s.id)}><Icon name="pdf" /></button>
                     {(isAdmin || s.isOwner) && <button className="icon-btn" title={isAdmin ? 'Edit (all columns)' : 'Edit'} onClick={() => startEdit(s.id)}><Icon name="edit" /></button>}
