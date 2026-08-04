@@ -68,12 +68,20 @@ export default function ViewData() {
   const [editErrors, setEditErrors] = useState(null);
   const editFileRef = useRef(null);
   const [exporting, setExporting] = useState(false);
+  const [expFrom, setExpFrom] = useState('');
+  const [expTo, setExpTo] = useState('');
 
-  // SUPER ADMIN: download the complete Excel across all circles.
+  // SUPER ADMIN: download the complete Excel across all circles (optional date range).
   const onExportAll = async () => {
     setExporting(true);
     try {
-      saveBlob(await API.exportAllCircles(), `MDR_AllCircles_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      const dmy = (iso) => { if (!iso) return ''; const [y, m, d] = iso.split('-'); return `${d}-${m}-${y}`; };
+      let name;
+      if (expFrom && expTo) name = `MDR_AllCircles_${dmy(expFrom)}_to_${dmy(expTo)}.xlsx`;
+      else if (expFrom) name = `MDR_AllCircles_from_${dmy(expFrom)}.xlsx`;
+      else if (expTo) name = `MDR_AllCircles_upto_${dmy(expTo)}.xlsx`;
+      else name = `MDR_AllCircles_${dmy(new Date().toISOString().slice(0, 10))}.xlsx`;
+      saveBlob(await API.exportAllCircles(expFrom || undefined, expTo || undefined), name);
       toast('Exported all circles');
     } catch (err) {
       toast(err.message || 'Export failed', 'err');
@@ -180,6 +188,14 @@ export default function ViewData() {
         <div className="table-toolbar">
           <div className="section-title" style={{ margin: 0 }}>{isAdmin ? 'All Submissions' : 'My Submissions'}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {isAdmin && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} title="Optional: export only records submitted/updated in this date range">
+                <label style={{ fontSize: 12, color: '#6b5b54' }}>From</label>
+                <input type="date" value={expFrom} onChange={(e) => setExpFrom(e.target.value)} style={{ padding: '5px 7px', borderRadius: 8, border: '1px solid #e0d2cc', fontSize: 12 }} />
+                <label style={{ fontSize: 12, color: '#6b5b54' }}>To</label>
+                <input type="date" value={expTo} onChange={(e) => setExpTo(e.target.value)} style={{ padding: '5px 7px', borderRadius: 8, border: '1px solid #e0d2cc', fontSize: 12 }} />
+              </div>
+            )}
             {isAdmin && (
               <button className="btn btn-blue btn-sm" onClick={onExportAll} disabled={exporting} title="Export the complete Excel across all circles" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <Icon name="download" size={15} /> {exporting ? 'Exporting…' : 'Export All Circles (Excel)'}

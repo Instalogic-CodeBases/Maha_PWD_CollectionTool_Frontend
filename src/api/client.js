@@ -284,7 +284,12 @@ const API = {
   getSubmission: (id) => request('GET', '/api/pwdtemplate/submissions/' + id),
 
   // SUPER ADMIN: complete Excel across all circles (returns a Blob)
-  exportAllCircles: () => request('GET', '/api/pwdtemplate/export-all'),
+  exportAllCircles: (from, to) => {
+    const qs = [];
+    if (from) qs.push('from=' + encodeURIComponent(from));
+    if (to) qs.push('to=' + encodeURIComponent(to));
+    return request('GET', '/api/pwdtemplate/export-all' + (qs.length ? '?' + qs.join('&') : ''));
+  },
 
   downloadSubmission: (id, forEdit, forAdmin) => {
     const qs = [];
