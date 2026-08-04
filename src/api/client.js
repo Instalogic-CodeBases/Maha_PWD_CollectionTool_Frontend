@@ -281,6 +281,10 @@ const API = {
 
   getSubmissions: () => request('GET', '/api/pwdtemplate/submissions'),
 
+  // Flat per-work-item rows for Reports / KPI dashboard / Graphs — sourced from
+  // the real MDR Excel submission data (Submission + SubmissionDetail + MasterWork).
+  getReportData: () => request('GET', '/api/pwdtemplate/report-data'),
+
   getSubmission: (id) => request('GET', '/api/pwdtemplate/submissions/' + id),
 
   // SUPER ADMIN: complete Excel across all circles (returns a Blob)

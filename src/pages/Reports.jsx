@@ -6,6 +6,7 @@ import { usePagination } from '../lib/usePagination.js';
 import { districtsForUser, circleForDistrict } from '../lib/helpers.js';
 import { CIRCLES, DISTRICT_EN, CIRCLE_EN } from '../lib/seed.js';
 import { downloadReportExcel } from '../lib/excel.js';
+import API from '../api/client.js';
 import ChartCanvas from '../components/ChartCanvas.jsx';
 import Pagination from '../components/Pagination.jsx';
 import { Icon } from '../components/Icons.jsx';
@@ -16,42 +17,55 @@ const SearchIcon = () => (
 
 const EMPTY = { circle: '', dist: '' };
 
+// This page now reads the real MDR submission data (one row per work item) from
+// GET /api/pwdtemplate/report-data, which the backend scopes exactly like every
+// other MDR endpoint: own submissions for regular users, ALL submissions for
+// Admin/SuperAdmin. The column keys below are fixed because the MDR report data
+// always uses these exact keys.
+const REPORT_COLS = [
+  { key: 'schemeName', marathi: 'Scheme / Work Name' },
+  { key: 'pendingAsOf', marathi: 'Pending Bills (Lakh)' },
+  { key: 'physicalProgress', marathi: 'Physical Progress %' },
+];
+
 export default function Reports() {
-  const { currentUser, fields, scopedSubmissions, loadSubmissions } = useApp();
+  const { currentUser } = useApp();
   const toast = useToast();
   const isAdmin = currentUser.role === 'admin';
   const uDist = districtsForUser(currentUser);
-  const { loading, error } = usePageData(() => loadSubmissions(), []);
+
+  const [submissions, setSubmissions] = useState([]);
+  const { loading, error } = usePageData(async () => {
+    setSubmissions((await API.getReportData()) || []);
+  }, []);
 
   const [filters, setFilters] = useState(EMPTY);
   const [applied, setApplied] = useState(EMPTY);
   const [q, setQ] = useState('');
 
   const reportScoped = () => {
-    let list = scopedSubmissions();
+    let list = submissions;
     if (applied.circle) list = list.filter((s) => s.circle === applied.circle);
     if (applied.dist) list = list.filter((s) => s.district === applied.dist);
     return list;
   };
 
   const list = reportScoped();
-  const pending = fields.find((f) => f.key === 'pendingAsOf');
-  const prog = fields.find((f) => f.key === 'physicalProgress');
 
   const { byDist, progMap, progLabels, progVals } = useMemo(() => {
     const byDist = {};
     const progMap = {};
     list.forEach((s) => {
-      byDist[s.district] = (byDist[s.district] || 0) + parseFloat(s.data[pending?.key] || 0);
+      byDist[s.district] = (byDist[s.district] || 0) + parseFloat(s.data.pendingAsOf || 0);
       if (!progMap[s.district]) progMap[s.district] = { sum: 0, n: 0 };
-      progMap[s.district].sum += parseFloat(s.data[prog?.key] || 0);
+      progMap[s.district].sum += parseFloat(s.data.physicalProgress || 0);
       progMap[s.district].n++;
     });
     const progLabels = Object.keys(progMap);
     const progVals = progLabels.map((k) => (progMap[k].n ? progMap[k].sum / progMap[k].n : 0));
     return { byDist, progMap, progLabels, progVals };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(list.map((s) => [s.district, s.data[pending?.key], s.data[prog?.key]])), pending?.key, prog?.key]);
+  }, [JSON.stringify(list.map((s) => [s.district, s.data.pendingAsOf, s.data.physicalProgress]))]);
 
   const rep1Config = useMemo(() => ({
     type: 'bar',
@@ -69,13 +83,11 @@ export default function Reports() {
 
   const onDownload = async () => {
     try {
-      const cols = fields.filter((f) => f.type !== 'district');
-      await downloadReportExcel(reportScoped(), cols);
+      await downloadReportExcel(reportScoped(), REPORT_COLS);
       toast('Report downloaded');
     } catch (err) { toast(err.message || 'Download failed', 'err'); }
   };
 
-  // Summary-table search + pagination (charts always show the full scoped set).
   const lq = q.trim().toLowerCase();
   const rows = progLabels
     .map((d, i) => ({ d, circle: circleForDistrict(d), n: progMap[d].n, pending: byDist[d] || 0, avg: progVals[i] }))
@@ -89,7 +101,6 @@ export default function Reports() {
     <>
       <div className="toolbar">
         <div>
-          {/* <h2 className="page-title">Reports</h2> */}
           <div className="page-sub">{isAdmin ? 'All circles and districts.' : 'Your assigned districts only.'}</div>
         </div>
         <button className="btn btn-blue" onClick={onDownload}><Icon name="download" size={15} /> Download Report</button>

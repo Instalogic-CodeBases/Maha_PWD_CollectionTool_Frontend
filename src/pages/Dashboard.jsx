@@ -1,15 +1,20 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext.jsx';
 import { usePageData } from '../lib/usePageData.js';
 import { districtsForUser, todayStr } from '../lib/helpers.js';
+import API from '../api/client.js';
 import ChartCanvas from '../components/ChartCanvas.jsx';
 import { Icon } from '../components/Icons.jsx';
 
+// KPI cards/graphs read the real MDR submission data (one row per work item) from
+// GET /api/pwdtemplate/report-data, scoped server-side exactly like every other
+// MDR endpoint: own submissions for regular users, ALL submissions for Admin/SuperAdmin.
 export default function Dashboard() {
-  const { currentUser, loadSubmissions, scopedSubmissions } = useApp();
-  const { loading, error } = usePageData(() => loadSubmissions(), []);
-
-  const scoped = scopedSubmissions();
+  const { currentUser } = useApp();
+  const [scoped, setScoped] = useState([]);
+  const { loading, error } = usePageData(async () => {
+    setScoped((await API.getReportData()) || []);
+  }, []);
   const isAdmin = currentUser.role === 'admin';
 
   const totalDistricts = districtsForUser(currentUser).length;
