@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import API from '../api/client.js';
 import { dedupeSubs } from '../lib/helpers.js';
 
@@ -15,6 +15,7 @@ const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
   const [currentUser, setCurrentUserState] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
   const [fields, setFields] = useState([]);
   const [computerIds, setComputerIds] = useState([]);
   const [submissions, setSubmissions] = useState([]);
@@ -37,10 +38,12 @@ export function AppProvider({ children }) {
     currentUserRef.current = u;
     setCurrentUserState(u);
   }, []);
+
   const setCurrentTemplateId = useCallback((id) => {
     templateIdRef.current = id;
     setCurrentTemplateIdState(id);
   }, []);
+
   const setFillDistrict = useCallback((d) => {
     fillDistrictRef.current = d;
     setFillDistrictState(d);
@@ -105,6 +108,7 @@ export function AppProvider({ children }) {
         role: isAdmin ? 'admin' : 'officer',
         roleName: roleObjs.map((r) => r.roleName).join(', ') || '—',
         hierarchyNodeName: u.primaryHierarchyNode ? u.primaryHierarchyNode.name : '—',
+        pwCircleNames: u.pwCircleNames || '',
         isActive: u.isActive,
         districts: u.primaryHierarchyNode ? [u.primaryHierarchyNode.name] : [],
       };
@@ -164,6 +168,21 @@ export function AppProvider({ children }) {
     return user;
   }, [loadContext, setCurrentUser]);
 
+  // Circle-based login (User/Officer flow). Same session handling as email login.
+  const circleLogin = useCallback(async (pwCircleId, password) => {
+    const resp = await API.circleLogin(pwCircleId, password);
+    const roles = (resp.user && resp.user.roles) || [];
+    const isAdmin = roles.some((r) => r === 'SuperAdmin' || r === 'Admin');
+    const ctx = await loadContext();
+    const user = {
+      name: (resp.user && resp.user.name) || '',
+      role: isAdmin || ctx.isAdmin ? 'admin' : 'officer',
+      districts: (ctx.districts || []).map((d) => d.name),
+    };
+    setCurrentUser(user);
+    return user;
+  }, [loadContext, setCurrentUser]);
+
   const logout = useCallback(async () => {
     try { await API.logout(); } catch (e) { /* ignore */ }
     setCurrentUser(null);
@@ -173,6 +192,28 @@ export function AppProvider({ children }) {
     setUsers([]);
     setFields([]);
   }, [setCurrentUser, setFillDistrict, setCurrentTemplateId]);
+
+  // Restore the session on load from the auth cookie so a refresh doesn't log out.
+  const restoreSession = useCallback(async () => {
+    try {
+      const resp = await API.me();
+      const roles = (resp.user && resp.user.roles) || [];
+      const isAdmin = roles.some((r) => r === 'SuperAdmin' || r === 'Admin');
+      let ctx = {};
+      try { ctx = await loadContext(); } catch (e) { ctx = {}; }
+      setCurrentUser({
+        name: (resp.user && resp.user.name) || (resp.user && resp.user.email) || '',
+        role: isAdmin || ctx.isAdmin ? 'admin' : 'officer',
+        districts: (ctx.districts || []).map((d) => d.name),
+      });
+    } catch (e) {
+      setCurrentUser(null); // not authenticated / cookie expired
+    } finally {
+      setAuthReady(true);
+    }
+  }, [loadContext, setCurrentUser]);
+
+  useEffect(() => { restoreSession(); }, [restoreSession]);
 
   // ---------- derived ----------
   const scopedSubmissions = useCallback(() => {
@@ -185,7 +226,7 @@ export function AppProvider({ children }) {
 
   const value = {
     // state
-    currentUser, fields, computerIds, submissions, users, templates,
+    currentUser, authReady, fields, computerIds, submissions, users, templates,
     currentTemplateId, allDistrictsList, apiDistricts, districtCircle,
     formVersionId, fillDistrict,
     // setters
@@ -195,7 +236,7 @@ export function AppProvider({ children }) {
     loadContext, loadFieldsForDistrict, loadSubmissions, loadComputerIds,
     loadUsers, loadTemplates, loadTemplateFields, loadAllDistricts,
     // auth
-    login, logout,
+    login, circleLogin, logout,
     // derived
     scopedSubmissions,
   };

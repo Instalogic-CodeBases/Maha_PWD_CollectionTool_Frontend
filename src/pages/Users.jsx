@@ -7,6 +7,7 @@ import API from '../api/client.js';
 import Modal from '../components/Modal.jsx';
 import Pagination from '../components/Pagination.jsx';
 import { circleForDistrict } from '../lib/helpers.js';
+import { Icon } from '../components/Icons.jsx';
 
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
@@ -26,6 +27,9 @@ export default function Users() {
   const [selected, setSelected] = useState(new Set()); // node ids as strings
   const [q, setQ] = useState('');
   const [distQ, setDistQ] = useState('');
+  const [circles, setCircles] = useState([]);          // all PW circles
+  const [selCircles, setSelCircles] = useState(new Set()); // selected circle ids (strings)
+  const [circleQ, setCircleQ] = useState('');
 
   // Admin district picker: show only the real PWD district rows — Marathi names
   // whose parent circle is an "अ.अ...मंडळ..." circle. (Display filter only.)
@@ -46,6 +50,7 @@ export default function Users() {
     setModalOpen(true);
     setMetaLoading(true);
     setDistQ('');
+    setCircleQ('');
     try {
       const meta = id ? await API.getUser(id) : await API.userMetadata();
       const r = meta.roles || [];
@@ -68,6 +73,16 @@ export default function Users() {
         ).map(String)
       );
       setSelected(pre);
+
+      // --- PW Circle(s) (Batch 2) ---
+      const allCircles = await API.getPwCircles();
+      setCircles(allCircles || []);
+      if (id) {
+        const assignedCircles = await API.getAssignedPwCircles(id);
+        setSelCircles(new Set((assignedCircles || []).map(String)));
+      } else {
+        setSelCircles(new Set());
+      }
     } catch (err) {
       toast(err.message || 'Could not load the user form', 'err');
       setModalOpen(false);
@@ -87,27 +102,28 @@ export default function Users() {
     setSelected(on ? new Set(pickNodes.map((n) => String(n.id))) : new Set());
   };
 
+  const toggleCircle = (cid, on) => {
+    setSelCircles((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(String(cid)); else next.delete(String(cid));
+      return next;
+    });
+  };
+  const toggleAllCircles = (on) => {
+    setSelCircles(on ? new Set(circles.map((c) => String(c.id))) : new Set());
+  };
+
   const save = async () => {
-    const name = form.name.trim();
-    const email = form.email.trim();
-    const phone = form.phone.trim();
-    const password = editId ? '' : form.password;
-    const roleId = Number(form.roleId);
-    const hierarchyNodeIds = Array.from(selected).map(Number).filter(Boolean);
-    const hierarchyNodeId = hierarchyNodeIds[0] || 0; // primary (legacy-compatible)
-    const isActive = form.isActive;
-
-    if (!name || !email || !phone) { toast('Name, Email & Phone are required', 'err'); return; }
-    if (!editId && !password) { toast('Password is required for a new user', 'err'); return; }
-    if (!roleId || !hierarchyNodeIds.length) { toast('Role and at least one District are required', 'err'); return; }
-
-    const payload = { name, email, phone, password, roleId, hierarchyNodeId, hierarchyNodeIds, isActive };
+    const password = form.password;
+    const pwCircleIds = Array.from(selCircles).map(Number).filter(Boolean);
+    if (!pwCircleIds.length) { toast('Select at least one PW Circle', 'err'); return; }
+    if (!password || password.length < 6) { toast('Password must be at least 6 characters', 'err'); return; }
     try {
-      if (editId) { await API.updateUser(editId, payload); }
-      else { await API.createUser(payload); }
-      setModalOpen(false);
+      const results = await Promise.all(pwCircleIds.map((id) => API.upsertCircleLogin(id, password)));
+      const failed = results.filter((r) => !(r && r.success));
+      if (failed.length) { toast(failed[0].message || 'Some circles could not be saved', 'err'); }
+      else { toast(`Saved ${pwCircleIds.length} circle login(s).`, 'ok'); setModalOpen(false); }
       await loadUsers();
-      toast(editId ? 'User updated' : 'User created — they can log in with this email & password now');
     } catch (err) { toast(err.message || 'Save failed', 'err'); }
   };
 
@@ -133,21 +149,32 @@ export default function Users() {
     ? roles.map((r) => <option key={r.id} value={r.id}>{r.roleName}</option>)
     : <option value="">No assignable roles</option>;
 
+  const cq = circleQ.trim().toLowerCase();
+  const visibleCircles = cq ? circles.filter((c) => c.name.toLowerCase().includes(cq)) : circles;
+  const selCirclesNum = circles.filter((c) => selCircles.has(String(c.id))).length;
+
   return (
     <>
       {/* Scoped styles for the district picker so nothing else in the app is affected */}
       <style>{`
-        .dist-block { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: #fff; }
+        /* Cleaner, better-aligned user form */
+        .modal .form-grid { gap: 18px 22px; }
+        .modal .form-field > label { font-size: 12.5px; font-weight: 600; color: #3a4a4f; margin-bottom: 8px; }
+        .modal .form-field select,
+        .modal .form-field input[type="password"] { height: 42px; }
+
+        .dist-block { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff; box-shadow: var(--shadow-xs); }
         .dist-head {
           display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-          padding: 8px 10px; background: #f8fafc; border-bottom: 1px solid var(--border);
+          padding: 10px 12px; background: #f6fafa; border-bottom: 1px solid var(--border);
         }
         .dist-head .spacer { flex: 1; }
         .dist-count { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
         .dist-search {
-          flex: 0 1 220px; min-width: 150px; height: 30px; padding: 0 10px;
-          border: 1px solid var(--border); border-radius: 8px; font-size: 12.5px; background: #fff;
+          flex: 0 1 220px; min-width: 150px; height: 32px; padding: 0 12px;
+          border: 1px solid var(--border-strong); border-radius: 8px; font-size: 12.5px; background: #fff;
         }
+        .dist-search:focus { outline: none; border-color: var(--blue); box-shadow: var(--ring); }
         .dist-list { max-height: 300px; overflow-y: auto; }
         .dist-block label.dist-row {
           display: flex !important;
@@ -167,10 +194,10 @@ export default function Users() {
           flex-direction: row !important;
           align-items: center;
           gap: 10px;
-          padding: 10px 12px;
+          padding: 12px 14px;
           border: 1px solid var(--border);
-          border-radius: 10px;
-          background: #f8fafc;
+          border-radius: 12px;
+          background: #f6fafa;
         }
         .active-row.active-row input[type="checkbox"] {
           flex: 0 0 16px !important;
@@ -178,17 +205,17 @@ export default function Users() {
           min-width: 0;
           margin: 0;
           padding: 0;
-          accent-color: #2563eb;
+          accent-color: var(--blue);
           cursor: pointer;
         }
         .active-row .t { font-size: 13px; font-weight: 600; }
         .active-row .s { font-size: 11.5px; color: var(--muted); }
         .dist-block label.dist-row:last-child { border-bottom: 0; }
-        .dist-block label.dist-row:hover { background: #f6f9ff; }
-        .dist-block label.dist-row.is-on { background: #eef6ff; }
+        .dist-block label.dist-row:hover { background: #f2faf9; }
+        .dist-block label.dist-row.is-on { background: #e8f6f4; }
         .dist-block label.dist-row input[type="checkbox"] {
           flex: 0 0 16px; margin: 0; padding: 0;
-          accent-color: #2563eb; cursor: pointer; display: block;
+          accent-color: var(--blue); cursor: pointer; display: block;
         }
         .dist-block label.dist-row .dist-name {
           flex: 1 1 auto; min-width: 0; font-size: 13.5px; font-weight: 500;
@@ -200,7 +227,7 @@ export default function Users() {
           display: flex; align-items: center; gap: 10px;
           padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: #f8fafc;
         }
-        .active-row input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: #2563eb; }
+        .active-row input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--blue); }
         .active-row .t { font-size: 13px; font-weight: 600; }
         .active-row .s { font-size: 11.5px; color: var(--muted); }
       `}</style>
@@ -209,35 +236,32 @@ export default function Users() {
         <div>
           <div className="page-sub"></div>
         </div>
-        <button className="btn btn-blue" onClick={() => openModal()}>+ Add User</button>
+        <button className="btn btn-blue" onClick={() => openModal()}><Icon name="add" size={15} /> Add User</button>
       </div>
 
       <div className="card">
         <div className="table-toolbar">
           <div className="search-box">
             <SearchIcon />
-            <input placeholder="Search name, email, role or district…" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input placeholder="Search name, role or PW circle…" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
         </div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>District(s)</th><th>Status</th><th style={{ width: 100 }}>Actions</th></tr></thead>
+            <thead><tr><th>Role</th><th>PW Circle(s)</th><th>Status</th><th style={{ width: 100 }}>Actions</th></tr></thead>
             <tbody>
               {pageRows.length ? pageRows.map((u) => (
                 <tr key={u.id}>
-                  <td>{u.name}</td>
-                  <td>{u.email}</td>
-                  <td>{u.phone || '—'}</td>
                   <td><span className={'badge ' + (u.role === 'admin' ? 'badge-success' : 'badge-muted')}>{u.roleName}</span></td>
-                  <td><span className="chip">{u.hierarchyNodeName}</span></td>
+                  <td><span className="chip">{u.pwCircleNames || u.hierarchyNodeName || '—'}</span></td>
                   <td><span className={'badge ' + (u.isActive ? 'badge-success' : 'badge-muted')}>{u.isActive ? 'Active' : 'Inactive'}</span></td>
                   <td>
-                    <button className="icon-btn" onClick={() => openModal(u.id)}>✏️</button>
-                    <button className="icon-btn danger" onClick={() => del(u.id)}>🗑️</button>
+                    <button className="icon-btn" title="Edit" onClick={() => openModal(u.id)}><Icon name="edit" /></button>
+                    <button className="icon-btn danger" title="Toggle active" onClick={() => del(u.id)}><Icon name="trash" /></button>
                   </td>
                 </tr>
               )) : (
-                <tr><td colSpan={7} className="empty">No matching users.</td></tr>
+                <tr><td colSpan={4} className="empty">No matching users.</td></tr>
               )}
             </tbody>
           </table>
@@ -256,55 +280,53 @@ export default function Users() {
           <div className="empty">Loading…</div>
         ) : (
           <div className="form-grid">
-            <div className="form-field"><label>Full Name <span className="req">*</span></label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div className="form-field"><label>Email <span className="req">*</span></label><input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-            <div className="form-field"><label>Phone <span className="req">*</span></label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-            {editId ? (
-              <div className="form-field"><label>Password</label><input type="password" placeholder="Not editable here — unchanged" disabled /></div>
-            ) : (
-              <div className="form-field"><label>Password <span className="req">*</span></label><input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
-            )}
-            <div className="form-field"><label>Role <span className="req">*</span></label>
-              <select value={form.roleId} onChange={(e) => setForm({ ...form, roleId: e.target.value })}>{roleOptions}</select>
+            <div className="form-field full">
+              <label>Role <span className="req">*</span></label>
+              <select value={form.roleId} onChange={(e) => setForm({ ...form, roleId: e.target.value })}>
+                {roleOptions}
+              </select>
             </div>
 
             <div className="form-field full">
-              <label>Assign District(s) <span className="req">*</span></label>
+              <label>Assign PW Circle(s) <span className="req">*</span></label>
 
               <div className="dist-block">
                 <div className="dist-head">
-                  <button type="button" className="btn" onClick={() => toggleAll(true)}>Select all</button>
-                  <button type="button" className="btn" onClick={() => toggleAll(false)}>Clear</button>
+                  <button type="button" className="btn" onClick={() => toggleAllCircles(true)}>Select all</button>
+                  <button type="button" className="btn" onClick={() => toggleAllCircles(false)}>Clear</button>
                   <span className="dist-count">
-                    {selNum ? `${selNum} of ${selCount} selected` : 'No district selected yet'}
+                    {selCirclesNum ? `${selCirclesNum} of ${circles.length} selected` : 'No PW Circle selected yet'}
                   </span>
                   <span className="spacer" />
                   <input
                     className="dist-search"
-                    placeholder="Filter districts…"
-                    value={distQ}
-                    onChange={(e) => setDistQ(e.target.value)}
+                    placeholder="Filter PW circles…"
+                    value={circleQ}
+                    onChange={(e) => setCircleQ(e.target.value)}
                   />
                 </div>
 
                 <div className="dist-list">
-                  {visibleNodes.length ? visibleNodes.map((n) => {
-                    const circle = circleForDistrict(n.name) || districtCircle[n.name] || '';
-                    const on = selected.has(String(n.id));
+                  {visibleCircles.length ? visibleCircles.map((c) => {
+                    const on = selCircles.has(String(c.id));
                     return (
-                      <label key={n.id} className={'dist-row' + (on ? ' is-on' : '')}>
+                      <label key={c.id} className={'dist-row' + (on ? ' is-on' : '')}>
                         <input
                           type="checkbox"
                           checked={on}
-                          onChange={(e) => toggleNode(n.id, e.target.checked)}
+                          onChange={(e) => toggleCircle(c.id, e.target.checked)}
                         />
-                        <span className="dist-name">{n.name}</span>
-                        {circle ? <span className="chip">{circle}</span> : <span />}
+                        <span className="dist-name">{c.name}</span>
+                        <span />
                       </label>
                     );
-                  }) : <div className="empty">No assignable districts</div>}
+                  }) : <div className="empty">No PW circles found</div>}
                 </div>
               </div>
+            </div>
+
+            <div className="form-field full"><label>Password <span className="req">*</span></label>
+              <input type="password" placeholder="Enter Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} autoComplete="new-password" />
             </div>
 
             <div className="form-field full">
@@ -312,7 +334,7 @@ export default function Users() {
                 <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
                 <span>
                   <span className="t">Active</span>{' '}
-                  <span className="s">— user can log in immediately with this email &amp; password</span>
+                  <span className="s">— user can log in immediately with the selected PW Circle &amp; password</span>
                 </span>
               </label>
             </div>

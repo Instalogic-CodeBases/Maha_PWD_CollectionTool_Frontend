@@ -1,0 +1,16 @@
+Current frontend source (from Sakshi) WITH the 3 fixes applied.
+Build:  npm install  &&  npm run build   -> outputs dist/  (deploy dist to C:\inetpub\pwd-web, KEEP web.config)
+
+Changed files (diff these against your repo):
+1. src/pages/Login.jsx
+   - Footer text -> "Designed & Developed by Instalogic Solutions Pvt. Ltd."
+   - Link URL fixed: instalogicsolutions.com -> https://www.instalogic.in/ (opens in new tab)
+2. src/pages/DataForm.jsx
+   - Date field changed from <input type="date"> (renders/returns the browser LOCALE, i.e.
+     MM/dd/yyyy on US machines) to a plain dd/MM/yyyy text input. Fixes the date flip at source.
+3. src/pages/ViewData.jsx
+   - Date separators changed from dd-MM-yyyy to dd/MM/yyyy (submission timestamps + PDF cells).
+
+node_modules and dist are intentionally excluded (regenerate with npm install / npm run build).
+This is the copy Sakshi provided; if her repo is newer, treat the repo as source of truth and
+apply the 3 changes above there.

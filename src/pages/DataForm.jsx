@@ -143,7 +143,10 @@ export default function DataForm() {
             } else if (f.type === 'number') {
               input = <input type="number" step="0.01" value={values[f.id] ?? ''} onChange={(e) => onNumberChange(f.id, e.target.value)} />;
             } else if (f.type === 'date') {
-              input = <input type="date" value={values[f.id] ?? ''} onChange={(e) => setVal(f.id, e.target.value)} />;
+              // Use a plain text field in dd/MM/yyyy — NOT <input type="date">, which
+              // renders and returns the browser locale's format (US shows MM/dd/yyyy).
+              // This keeps the value exactly dd/MM/yyyy through entry, save and edit.
+              input = <input type="text" inputMode="numeric" placeholder="dd/MM/yyyy" maxLength={10} value={values[f.id] ?? ''} onChange={(e) => setVal(f.id, e.target.value)} />;
             } else {
               input = <input type="text" value={values[f.id] ?? ''} onChange={(e) => setVal(f.id, e.target.value)} />;
             }

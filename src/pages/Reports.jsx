@@ -4,10 +4,12 @@ import { usePageData } from '../lib/usePageData.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { usePagination } from '../lib/usePagination.js';
 import { districtsForUser, circleForDistrict } from '../lib/helpers.js';
-import { CIRCLES } from '../lib/seed.js';
+import { CIRCLES, DISTRICT_EN, CIRCLE_EN } from '../lib/seed.js';
 import { downloadReportExcel } from '../lib/excel.js';
+import API from '../api/client.js';
 import ChartCanvas from '../components/ChartCanvas.jsx';
 import Pagination from '../components/Pagination.jsx';
+import { Icon } from '../components/Icons.jsx';
 
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
@@ -15,42 +17,81 @@ const SearchIcon = () => (
 
 const EMPTY = { circle: '', dist: '' };
 
+// This page now reads the real MDR submission data (one row per work item) from
+// GET /api/pwdtemplate/report-data, which the backend scopes exactly like every
+// other MDR endpoint: own submissions for regular users, ALL submissions for
+// Admin/SuperAdmin. The column keys below are fixed because the MDR report data
+// always uses these exact keys.
+const REPORT_COLS = [
+  { key: 'schemeName', marathi: 'Scheme / Work Name' },
+  { key: 'pendingAsOf', marathi: 'Pending Bills (Lakh)' },
+  { key: 'physicalProgress', marathi: 'Physical Progress %' },
+];
+
 export default function Reports() {
-  const { currentUser, fields, scopedSubmissions, loadSubmissions } = useApp();
+  const { currentUser } = useApp();
   const toast = useToast();
   const isAdmin = currentUser.role === 'admin';
   const uDist = districtsForUser(currentUser);
-  const { loading, error } = usePageData(() => loadSubmissions(), []);
+
+  const [submissions, setSubmissions] = useState([]);
+  const { loading, error } = usePageData(async () => {
+    const rows = await API.getReportData();
+    setSubmissions(Array.isArray(rows) ? rows : []);
+  }, []);
 
   const [filters, setFilters] = useState(EMPTY);
   const [applied, setApplied] = useState(EMPTY);
   const [q, setQ] = useState('');
 
+  // Normalize so the dropdown value matches the data regardless of language
+  // (Marathi vs English) or stray whitespace/case. This is the root-cause fix
+  // for the Admin filter: the report data's circle/district strings did not
+  // always byte-match the dropdown option values, so equality filtering silently
+  // returned nothing. We compare on a normalized key and also accept the English
+  // alias for each Marathi name.
+  const norm = (v) => String(v || '').trim().toLowerCase();
+  const circleMatches = (dataCircle, picked) => {
+    if (!picked) return true;
+    const n = norm(dataCircle);
+    return n === norm(picked) || n === norm(CIRCLE_EN[picked] || '');
+  };
+  const distMatches = (dataDist, picked) => {
+    if (!picked) return true;
+    const n = norm(dataDist);
+    return n === norm(picked) || n === norm(DISTRICT_EN[picked] || '');
+  };
+
   const reportScoped = () => {
-    let list = scopedSubmissions();
-    if (applied.circle) list = list.filter((s) => s.circle === applied.circle);
-    if (applied.dist) list = list.filter((s) => s.district === applied.dist);
+    let list = submissions;
+    if (applied.circle) list = list.filter((s) => circleMatches(s.circle, applied.circle));
+    if (applied.dist) list = list.filter((s) => distMatches(s.district, applied.dist));
     return list;
   };
 
   const list = reportScoped();
-  const pending = fields.find((f) => f.key === 'pendingAsOf');
-  const prog = fields.find((f) => f.key === 'physicalProgress');
 
-  const { byDist, progMap, progLabels, progVals } = useMemo(() => {
+  const { byDist, progMap, progLabels, progVals, circleByDist } = useMemo(() => {
     const byDist = {};
     const progMap = {};
+    // Root-cause fix (Summary Table circle): the real PW Circle for each district
+    // comes from the submission data itself (s.circle = PwCircle.Name from the DB,
+    // which reflects the latest PW-Circle mapping). The old code re-derived the
+    // circle from a hardcoded frontend map, so after remapping it showed blank or
+    // wrong circles. We now record the actual circle seen in the data per district.
+    const circleByDist = {};
     list.forEach((s) => {
-      byDist[s.district] = (byDist[s.district] || 0) + parseFloat(s.data[pending?.key] || 0);
+      byDist[s.district] = (byDist[s.district] || 0) + parseFloat(s.data.pendingAsOf || 0);
       if (!progMap[s.district]) progMap[s.district] = { sum: 0, n: 0 };
-      progMap[s.district].sum += parseFloat(s.data[prog?.key] || 0);
+      progMap[s.district].sum += parseFloat(s.data.physicalProgress || 0);
       progMap[s.district].n++;
+      if (s.circle && !circleByDist[s.district]) circleByDist[s.district] = s.circle;
     });
     const progLabels = Object.keys(progMap);
     const progVals = progLabels.map((k) => (progMap[k].n ? progMap[k].sum / progMap[k].n : 0));
-    return { byDist, progMap, progLabels, progVals };
+    return { byDist, progMap, progLabels, progVals, circleByDist };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(list.map((s) => [s.district, s.data[pending?.key], s.data[prog?.key]])), pending?.key, prog?.key]);
+  }, [JSON.stringify(list.map((s) => [s.district, s.circle, s.data.pendingAsOf, s.data.physicalProgress]))]);
 
   const rep1Config = useMemo(() => ({
     type: 'bar',
@@ -68,17 +109,15 @@ export default function Reports() {
 
   const onDownload = async () => {
     try {
-      const cols = fields.filter((f) => f.type !== 'district');
-      await downloadReportExcel(reportScoped(), cols);
+      await downloadReportExcel(reportScoped(), REPORT_COLS);
       toast('Report downloaded');
     } catch (err) { toast(err.message || 'Download failed', 'err'); }
   };
 
-  // Summary-table search + pagination (charts always show the full scoped set).
   const lq = q.trim().toLowerCase();
   const rows = progLabels
-    .map((d, i) => ({ d, circle: circleForDistrict(d), n: progMap[d].n, pending: byDist[d] || 0, avg: progVals[i] }))
-    .filter((r) => !lq || (r.d + ' ' + r.circle).toLowerCase().includes(lq));
+    .map((d, i) => ({ d, circle: circleByDist[d] || circleForDistrict(d), n: progMap[d].n, pending: byDist[d] || 0, avg: progVals[i] }))
+    .filter((r) => !lq || (r.d + ' ' + r.circle + ' ' + (DISTRICT_EN[r.d] || '') + ' ' + (CIRCLE_EN[r.circle] || '')).toLowerCase().includes(lq));
   const { page, setPage, pageCount, total, pageSize, pageRows } = usePagination(rows, 10, lq);
 
   if (loading) return <div className="empty">Loading…</div>;
@@ -88,12 +127,12 @@ export default function Reports() {
     <>
       <div className="toolbar">
         <div>
-          {/* <h2 className="page-title">Reports</h2> */}
           <div className="page-sub">{isAdmin ? 'All circles and districts.' : 'Your assigned districts only.'}</div>
         </div>
-        <button className="btn btn-blue" onClick={onDownload}>⬇️ Download Report</button>
+        <button className="btn btn-blue" onClick={onDownload}><Icon name="download" size={15} /> Download Report</button>
       </div>
 
+      {isAdmin && (
       <div className="card" style={{ marginBottom: 14 }}>
         <div className="filters">
           {isAdmin && (
@@ -101,22 +140,25 @@ export default function Reports() {
               <label style={{ fontSize: 11, color: 'var(--muted)' }}>Circle</label><br />
               <select value={filters.circle} onChange={(e) => setFilters({ ...filters, circle: e.target.value })}>
                 <option value="">All</option>
-                {CIRCLES.map((x) => <option key={x} value={x}>{x}</option>)}
+                {CIRCLES.map((x) => <option key={x} value={x}>{CIRCLE_EN[x] || x}</option>)}
               </select>
             </div>
           )}
-          <div>
-            <label style={{ fontSize: 11, color: 'var(--muted)' }}>District</label><br />
-            <select value={filters.dist} onChange={(e) => setFilters({ ...filters, dist: e.target.value })}>
-              <option value="">All</option>
-              {uDist.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
-          </div>
+          {isAdmin && (
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--muted)' }}>District</label><br />
+              <select value={filters.dist} onChange={(e) => setFilters({ ...filters, dist: e.target.value })}>
+                <option value="">All</option>
+                {uDist.map((d) => <option key={d} value={d}>{DISTRICT_EN[d] || d}</option>)}
+              </select>
+            </div>
+          )}
           <div style={{ alignSelf: 'flex-end' }}>
             <button className="btn btn-blue btn-sm" onClick={apply}>Apply</button>
           </div>
         </div>
       </div>
+      )}
 
       <div className="two-col">
         <div className="card">
@@ -143,8 +185,8 @@ export default function Reports() {
             <tbody>
               {pageRows.length ? pageRows.map((r) => (
                 <tr key={r.d}>
-                  <td>{r.d}</td>
-                  <td>{r.circle}</td>
+                  <td>{DISTRICT_EN[r.d] || r.d}</td>
+                  <td>{CIRCLE_EN[r.circle] || r.circle}</td>
                   <td>{r.n}</td>
                   <td>{r.pending.toFixed(2)}</td>
                   <td>{r.avg.toFixed(1)}</td>

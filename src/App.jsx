@@ -25,7 +25,13 @@ function AdminOnly({ children }) {
 }
 
 export default function App() {
-  const { currentUser } = useApp();
+  const { currentUser, authReady } = useApp();
+
+  // Wait for the session-restore check before deciding to redirect (prevents a
+  // refresh from bouncing an authenticated user to the login page).
+  if (!authReady) {
+    return <div className="empty" style={{ padding: 40, textAlign: 'center' }}>Loading…</div>;
+  }
 
   return (
     <Routes>

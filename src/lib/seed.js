@@ -25,6 +25,24 @@ export const DISTRICT_EN = {
   'नागपूर': 'Nagpur', 'वर्धा': 'Wardha', 'भंडारा': 'Bhandara', 'गोंदिया': 'Gondia', 'चंद्रपूर': 'Chandrapur', 'गडचिरोली': 'Gadchiroli',
 };
 
+/* English names for Circles, e.g. "SE PWC Pune" — DISPLAY ONLY (used by report
+   dropdowns/tables). Built from the Circle's own suffix so it always covers every
+   Circle in CIRCLES; the underlying value stays the original Marathi string, so
+   filtering, scoping and Excel export are unchanged. */
+const _CIRCLE_SUFFIX_EN = {
+  'मुंबई': 'Mumbai',
+  'छ. संभाजीनगर': 'Chh. Sambhajinagar',
+};
+export const CIRCLE_EN = (() => {
+  const map = {};
+  for (const circle of CIRCLES) {
+    const suffix = String(circle).split(',').pop().trim();
+    const en = _CIRCLE_SUFFIX_EN[suffix] || DISTRICT_EN[suffix] || suffix;
+    map[circle] = 'SE PWC ' + en;
+  }
+  return map;
+})();
+
 /* Known alternate / sub-region spellings that should resolve to a master district (e.g. Panvel -> Raigad). */
 export const DISTRICT_ALIASES = {
   panvel: 'रायगड', 'पनवेल': 'रायगड',
