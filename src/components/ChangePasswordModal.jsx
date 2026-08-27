@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Modal from './Modal.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import API from '../api/client.js';
+import { Icon } from './Icons.jsx';
 
 // Basic strength: length + variety. Returns { score 0-4, label, ok }.
 function strength(pw) {
@@ -19,11 +20,12 @@ export default function ChangePasswordModal({ open, onClose }) {
   const [cur, setCur] = useState('');
   const [nw, setNw] = useState('');
   const [cf, setCf] = useState('');
+  const [visible, setVisible] = useState({ cur: false, nw: false, cf: false });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
   const st = strength(nw);
-  const reset = () => { setCur(''); setNw(''); setCf(''); setErr(''); setBusy(false); };
+  const reset = () => { setCur(''); setNw(''); setCf(''); setVisible({ cur: false, nw: false, cf: false }); setErr(''); setBusy(false); };
   const close = () => { reset(); onClose(); };
 
   const submit = async () => {
@@ -57,11 +59,17 @@ export default function ChangePasswordModal({ open, onClose }) {
       <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
         <div className="form-field">
           <label>Current Password <span className="req">*</span></label>
-          <input type="password" placeholder="Enter Current Password" value={cur} onChange={(e) => setCur(e.target.value)} autoComplete="current-password" />
+          <div className="password-wrap">
+            <input type={visible.cur ? 'text' : 'password'} placeholder="Enter Current Password" value={cur} onChange={(e) => setCur(e.target.value)} autoComplete="current-password" />
+            <button type="button" className="password-toggle" onClick={() => setVisible((v) => ({ ...v, cur: !v.cur }))} aria-label={visible.cur ? 'Hide current password' : 'Show current password'} title={visible.cur ? 'Hide current password' : 'Show current password'}><Icon name={visible.cur ? 'eyeOff' : 'eye'} size={17} /></button>
+          </div>
         </div>
         <div className="form-field">
           <label>New Password <span className="req">*</span></label>
-          <input type="password" placeholder="Enter New Password" value={nw} onChange={(e) => setNw(e.target.value)} autoComplete="new-password" />
+          <div className="password-wrap">
+            <input type={visible.nw ? 'text' : 'password'} placeholder="Enter New Password" value={nw} onChange={(e) => setNw(e.target.value)} autoComplete="new-password" />
+            <button type="button" className="password-toggle" onClick={() => setVisible((v) => ({ ...v, nw: !v.nw }))} aria-label={visible.nw ? 'Hide new password' : 'Show new password'} title={visible.nw ? 'Hide new password' : 'Show new password'}><Icon name={visible.nw ? 'eyeOff' : 'eye'} size={17} /></button>
+          </div>
           {nw && (
             <div style={{ marginTop: 6 }}>
               <div style={{ height: 6, borderRadius: 4, background: '#eef2f7', overflow: 'hidden' }}>
@@ -73,7 +81,10 @@ export default function ChangePasswordModal({ open, onClose }) {
         </div>
         <div className="form-field">
           <label>Confirm New Password <span className="req">*</span></label>
-          <input type="password" placeholder="Re-enter New Password" value={cf} onChange={(e) => setCf(e.target.value)} autoComplete="new-password" />
+          <div className="password-wrap">
+            <input type={visible.cf ? 'text' : 'password'} placeholder="Re-enter New Password" value={cf} onChange={(e) => setCf(e.target.value)} autoComplete="new-password" />
+            <button type="button" className="password-toggle" onClick={() => setVisible((v) => ({ ...v, cf: !v.cf }))} aria-label={visible.cf ? 'Hide confirmation password' : 'Show confirmation password'} title={visible.cf ? 'Hide confirmation password' : 'Show confirmation password'}><Icon name={visible.cf ? 'eyeOff' : 'eye'} size={17} /></button>
+          </div>
           {cf && nw !== cf && <div style={{ fontSize: 11.5, color: '#e11d48', marginTop: 4 }}>Passwords do not match.</div>}
         </div>
         {err && <div className="notice err" style={{ marginTop: 2 }}>{err}</div>}

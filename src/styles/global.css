@@ -57,6 +57,10 @@ body {
 }
 button { font-family: inherit; cursor: pointer; }
 input, select, textarea { font-family: inherit; color: var(--text); }
+/* Keep exactly one password eye: the app-owned .password-toggle button.
+   Hide Edge/IE's native reveal control, which otherwise appears beside it. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear { display: none; }
 ::-webkit-scrollbar { width: 9px; height: 9px; }
 ::-webkit-scrollbar-thumb { background: #c3d1d2; border-radius: 6px; }
 ::-webkit-scrollbar-thumb:hover { background: #aebfc0; }
@@ -342,3 +346,11 @@ html, body { background: #5c6aed; }
 @media (max-width: 900px) {
   .shell { margin: 0; border-radius: 0; min-height: 100vh; box-shadow: none; }
 }
+
+/* Password visibility controls — shared by login and change-password fields. */
+.password-wrap { position: relative; display: flex; align-items: center; }
+.password-wrap input { padding-right: 44px !important; }
+.password-toggle { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--muted); }
+.password-toggle:hover { color: var(--blue); background: var(--blue-lighter); }
+.password-toggle:focus-visible { outline: none; box-shadow: var(--ring); }
+.password-toggle svg { display: block; }

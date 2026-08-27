@@ -1,0 +1,9 @@
+Physical Progress average fix
+
+The Reports page now keeps two separate counts:
+- # Works = every unique filled Budget Item No.
+- Average Progress denominator = only works with a non-blank numeric Physical Progress value.
+
+Example: five filled works with progress entered for only 20, 30, and 40 => average is (20 + 30 + 40) / 3 = 30%, not divided by 5. Blank progress values are excluded from the average, while the works remain included in # Works and filled-work counts.
+
+No Excel upload/edit/export, authentication, routing, or permissions flow was changed.

@@ -304,10 +304,11 @@ const API = {
   getSubmission: (id) => request('GET', '/api/pwdtemplate/submissions/' + id),
 
   // SUPER ADMIN: complete Excel across all circles (returns a Blob)
-  exportAllCircles: (from, to) => {
+  exportAllCircles: (from, to, circle) => {
     const qs = [];
     if (from) qs.push('from=' + encodeURIComponent(from));
     if (to) qs.push('to=' + encodeURIComponent(to));
+    if (circle) qs.push('circle=' + encodeURIComponent(circle));
     return request('GET', '/api/pwdtemplate/export-all' + (qs.length ? '?' + qs.join('&') : ''));
   },
 

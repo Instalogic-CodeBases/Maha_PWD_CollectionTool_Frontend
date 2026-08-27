@@ -17,7 +17,7 @@ import { useState } from 'react';
      dashboard users dataform template cids viewdata reports upload download
      view edit trash add save search filter refresh settings lock logout
      calendar map layers file document chevronUp chevronDown close check
-     alert pdf sortAsc sortDesc
+     alert pdf eye eyeOff sortAsc sortDesc
    ============================================================================ */
 
 const BASE = {
@@ -177,6 +177,19 @@ const PATHS = {
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <path d="M14 2v6h6" />
       <path d="M8.5 14v4M8.5 14h1.2a1.1 1.1 0 0 1 0 2.2H8.5M13 14v4h.9a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H13zM16.6 14H18M16.6 14v4M16.6 16h1.1" />
+    </>
+  ),
+  eye: (
+    <>
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  eyeOff: (
+    <>
+      <path d="m3 3 18 18" />
+      <path d="M10.6 5.1A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.4 18.4 0 0 1-3 3.7M6.2 6.2C3.5 8.1 2 12 2 12s3.5 7 10 7a10 10 0 0 0 4.2-.9" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
     </>
   ),
   chevronUp: <path d="m6 15 6-6 6 6" />,

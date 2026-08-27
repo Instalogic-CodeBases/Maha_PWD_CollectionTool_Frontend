@@ -6,6 +6,7 @@ import API from '../api/client.js';
 import Modal from '../components/Modal.jsx';
 import Pagination from '../components/Pagination.jsx';
 import { Icon } from '../components/Icons.jsx';
+import { CIRCLES, CIRCLE_EN } from '../lib/seed.js';
 
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
@@ -70,6 +71,7 @@ export default function ViewData() {
   const [exporting, setExporting] = useState(false);
   const [expFrom, setExpFrom] = useState('');
   const [expTo, setExpTo] = useState('');
+  const [expCircle, setExpCircle] = useState('');
 
   // SUPER ADMIN: download the complete Excel across all circles (optional date range).
   const onExportAll = async () => {
@@ -77,12 +79,20 @@ export default function ViewData() {
     try {
       const dmy = (iso) => { if (!iso) return ''; const [y, m, d] = iso.split('-'); return `${d}-${m}-${y}`; };
       let name;
-      if (expFrom && expTo) name = `MDR_AllCircles_${dmy(expFrom)}_to_${dmy(expTo)}.xlsx`;
-      else if (expFrom) name = `MDR_AllCircles_from_${dmy(expFrom)}.xlsx`;
-      else if (expTo) name = `MDR_AllCircles_upto_${dmy(expTo)}.xlsx`;
-      else name = `MDR_AllCircles_${dmy(new Date().toISOString().slice(0, 10))}.xlsx`;
-      saveBlob(await API.exportAllCircles(expFrom || undefined, expTo || undefined), name);
-      toast('Exported all circles');
+      const circleLabel = expCircle ? `_${(CIRCLE_EN[expCircle] || expCircle).replace(/[^a-z0-9]+/gi, '_')}` : '_AllCircles';
+      if (expFrom && expTo) name = `MDR${circleLabel}_${dmy(expFrom)}_to_${dmy(expTo)}.xlsx`;
+      else if (expFrom) name = `MDR${circleLabel}_from_${dmy(expFrom)}.xlsx`;
+      else if (expTo) name = `MDR${circleLabel}_upto_${dmy(expTo)}.xlsx`;
+      else name = `MDR${circleLabel}_${dmy(new Date().toISOString().slice(0, 10))}.xlsx`;
+      const selectedStoredCircle = expCircle
+        ? (subs.find((s) => {
+            const stored = String(s.pwCircle || '').trim().toLowerCase();
+            return stored === expCircle.trim().toLowerCase()
+              || stored === String(CIRCLE_EN[expCircle] || '').trim().toLowerCase();
+          })?.pwCircle || CIRCLE_EN[expCircle] || expCircle)
+        : undefined;
+      saveBlob(await API.exportAllCircles(expFrom || undefined, expTo || undefined, selectedStoredCircle), name);
+      toast(expCircle ? `Exported ${CIRCLE_EN[expCircle] || expCircle}` : 'Exported all circles');
     } catch (err) {
       toast(err.message || 'Export failed', 'err');
     } finally {
@@ -189,7 +199,12 @@ export default function ViewData() {
           <div className="section-title" style={{ margin: 0 }}>{isAdmin ? 'All Submissions' : 'My Submissions'}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {isAdmin && (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} title="Optional: export only records submitted/updated in this date range">
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} title="Optional: export all circles or one selected circle, with an optional date range">
+                <label style={{ fontSize: 12, color: '#6b5b54' }}>Circle</label>
+                <select value={expCircle} onChange={(e) => setExpCircle(e.target.value)} style={{ padding: '5px 7px', borderRadius: 8, border: '1px solid #e0d2cc', fontSize: 12 }}>
+                  <option value="">All</option>
+                  {CIRCLES.map((circle) => <option key={circle} value={circle}>{CIRCLE_EN[circle] || circle}</option>)}
+                </select>
                 <label style={{ fontSize: 12, color: '#6b5b54' }}>From</label>
                 <input type="date" value={expFrom} onChange={(e) => setExpFrom(e.target.value)} style={{ padding: '5px 7px', borderRadius: 8, border: '1px solid #e0d2cc', fontSize: 12 }} />
                 <label style={{ fontSize: 12, color: '#6b5b54' }}>To</label>
@@ -198,7 +213,7 @@ export default function ViewData() {
             )}
             {isAdmin && (
               <button className="btn btn-blue btn-sm" onClick={onExportAll} disabled={exporting} title="Export the complete Excel across all circles" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <Icon name="download" size={15} /> {exporting ? 'Exporting…' : 'Export All Circles (Excel)'}
+                <Icon name="download" size={15} /> {exporting ? 'Exporting…' : expCircle ? 'Export Selected Circle (Excel)' : 'Export All Circles (Excel)'}
               </button>
             )}
             <div className="search-box">

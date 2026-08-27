@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext.jsx';
 import API from '../api/client.js';
-import { PwdLogo } from '../components/Icons.jsx';
+import { Icon, PwdLogo } from '../components/Icons.jsx';
 
 export default function Login() {
   const { login, circleLogin } = useApp();
@@ -19,6 +19,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
 
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -79,8 +80,14 @@ export default function Login() {
 
           <div className="field">
             <label>Password</label>
-            <input type="password" required placeholder="Enter Password" value={password}
-              onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+            <div className="password-wrap">
+              <input type={showPassword ? 'text' : 'password'} required placeholder="Enter Password" value={password}
+                onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+              <button type="button" className="password-toggle" onClick={() => setShowPassword((visible) => !visible)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'} title={showPassword ? 'Hide password' : 'Show password'}>
+                <Icon name={showPassword ? 'eyeOff' : 'eye'} size={18} />
+              </button>
+            </div>
           </div>
 
           <button type="submit" className="btn-primary" disabled={busy}>
