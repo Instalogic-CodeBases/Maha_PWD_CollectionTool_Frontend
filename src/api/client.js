@@ -329,6 +329,45 @@ const API = {
 
   },
 
+  // ---- Soft Loan 5 Year Template Flow ----
+
+  downloadSoftLoanTemplate: () => request('GET', '/api/softloantemplate/download'), // returns a Blob
+
+  uploadSoftLoanTemplate: (file) => {
+
+    const fd = new FormData();
+
+    fd.append('file', file);
+
+    return request('POST', '/api/softloantemplate/upload', fd, true);
+
+  },
+
+  getSoftLoanSubmissions: () => request('GET', '/api/softloantemplate/submissions'),
+
+  getSoftLoanSubmission: (id) => request('GET', '/api/softloantemplate/submissions/' + id),
+
+  downloadSoftLoanSubmission: (id) => request('GET', '/api/softloantemplate/submissions/' + id + '/download'), // returns a Blob
+
+  updateSoftLoanSubmission: (id, file) => {
+
+    const fd = new FormData();
+
+    fd.append('file', file);
+
+    return request('POST', '/api/softloantemplate/submissions/' + id + '/upload', fd, true);
+
+  },
+
+  // SUPER ADMIN: complete Soft Loan Excel across all circles (returns a Blob)
+  exportAllSoftLoan: (from, to, circle) => {
+    const qs = [];
+    if (from) qs.push('from=' + encodeURIComponent(from));
+    if (to) qs.push('to=' + encodeURIComponent(to));
+    if (circle) qs.push('circle=' + encodeURIComponent(circle));
+    return request('GET', '/api/softloantemplate/export-all' + (qs.length ? '?' + qs.join('&') : ''));
+  },
+
 };
 
 

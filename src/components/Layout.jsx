@@ -10,13 +10,18 @@ function NavIcon({ name }) { return <Icon name={name} size={19} />; }
 const NAV_ADMIN = [
   ['dashboard', 'Dashboard'],
   ['users', 'User Management'],
+  ['upload', 'Upload & Download Template'],
+  ['softloan-upload', 'Upload & Download Soft Loan Template'],
   ['viewdata', 'View Submitted Data'],
+  ['softloan-viewdata', 'View Submitted Soft Loan Data'],
   ['reports', 'Reports'],
 ];
 const NAV_OFFICER = [
   ['dashboard', 'Dashboard'],
   ['upload', 'Upload & Download Template'],
+  ['softloan-upload', 'Upload & Download Soft Loan Template'],
   ['viewdata', 'View Submitted Data'],
+  ['softloan-viewdata', 'View Submitted Soft Loan Data'],
   ['reports', 'Reports'],
 ];
 
@@ -37,7 +42,9 @@ export default function Layout() {
     dashboard: 'Dashboard',
     users: 'User Management',
     upload: 'Upload & Download Template',
+    'softloan-upload': 'Upload & Download Soft Loan Template',
     viewdata: 'View Submitted Data',
+    'softloan-viewdata': 'View Submitted Soft Loan Data',
     reports: 'Reports',
   };
   const title = titleMap[page] || page;

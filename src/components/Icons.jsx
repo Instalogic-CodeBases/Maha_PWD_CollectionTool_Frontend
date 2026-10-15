@@ -78,6 +78,19 @@ const PATHS = {
       <path d="M12 3v12M7 8l5-5 5 5" />
     </>
   ),
+  'softloan-upload': (
+    <>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6M12 18v-6M9 15l3-3 3 3" />
+    </>
+  ),
+  'softloan-viewdata': (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+      <circle cx="9" cy="9" r="1" />
+    </>
+  ),
   download: (
     <>
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />

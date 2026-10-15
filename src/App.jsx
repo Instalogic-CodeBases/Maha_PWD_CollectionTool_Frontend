@@ -8,6 +8,8 @@ import DataForm from './pages/DataForm.jsx';
 import Template from './pages/Template.jsx';
 import ComputerIds from './pages/ComputerIds.jsx';
 import Upload from './pages/Upload.jsx';
+import SoftLoanUpload from './pages/SoftLoanUpload.jsx';
+import SoftLoanViewData from './pages/SoftLoanViewData.jsx';
 import ViewData from './pages/ViewData.jsx';
 import Reports from './pages/Reports.jsx';
 
@@ -41,7 +43,9 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/dataform" element={<DataForm />} />
         <Route path="/upload" element={<Upload />} />
+        <Route path="/softloan-upload" element={<SoftLoanUpload />} />
         <Route path="/viewdata" element={<ViewData />} />
+        <Route path="/softloan-viewdata" element={<SoftLoanViewData />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/users" element={<AdminOnly><Users /></AdminOnly>} />
         <Route path="/template" element={<AdminOnly><Template /></AdminOnly>} />

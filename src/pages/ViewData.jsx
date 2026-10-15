@@ -206,9 +206,9 @@ export default function ViewData() {
                   {CIRCLES.map((circle) => <option key={circle} value={circle}>{CIRCLE_EN[circle] || circle}</option>)}
                 </select>
                 <label style={{ fontSize: 12, color: '#6b5b54' }}>From</label>
-                <input type="date" value={expFrom} onChange={(e) => setExpFrom(e.target.value)} style={{ padding: '5px 7px', borderRadius: 8, border: '1px solid #e0d2cc', fontSize: 12 }} />
+                <input type="date" min="1900-01-01" value={expFrom} onChange={(e) => setExpFrom(e.target.value)} style={{ padding: '5px 7px', borderRadius: 8, border: '1px solid #e0d2cc', fontSize: 12 }} />
                 <label style={{ fontSize: 12, color: '#6b5b54' }}>To</label>
-                <input type="date" value={expTo} onChange={(e) => setExpTo(e.target.value)} style={{ padding: '5px 7px', borderRadius: 8, border: '1px solid #e0d2cc', fontSize: 12 }} />
+                <input type="date" min="1900-01-01" value={expTo} onChange={(e) => setExpTo(e.target.value)} style={{ padding: '5px 7px', borderRadius: 8, border: '1px solid #e0d2cc', fontSize: 12 }} />
               </div>
             )}
             {isAdmin && (
